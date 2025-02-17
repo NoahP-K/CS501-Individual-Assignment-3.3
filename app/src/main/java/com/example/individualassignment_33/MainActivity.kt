@@ -42,6 +42,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        //create a parser for the xml file of words
         val wordParser = resources.getXml(R.xml.typingwords)
         setContent {
             IndividualAssignment_33Theme {
@@ -51,6 +52,7 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+//a function to parse the words xml file and return a vector of strings
 fun parseWords(parser: XmlResourceParser): Vector<String> {
     var words = Vector<String>()
     while (parser.eventType != XmlPullParser.END_DOCUMENT) {
@@ -64,10 +66,12 @@ fun parseWords(parser: XmlResourceParser): Vector<String> {
     return words
 }
 
+//returns a random index for a list of given size
 fun getWordIndex(size: Int): Int {
     return (0..size-1).shuffled()[0]
 }
 
+//makes a vector of mutable state integers representing random indices in a list of given size
 fun makeWordList(size: Int): Vector<MutableState<Int>> {
     var wordIndices = Vector<MutableState<Int>>(0)
     for(i in 1..5){
@@ -76,21 +80,23 @@ fun makeWordList(size: Int): Vector<MutableState<Int>> {
     return wordIndices
 }
 
+//The main function for displaying the screen
 @Composable
 fun MakeScreen(words: Vector<String>) {
-    var totalWords by remember { mutableStateOf(0f) }
+    var totalWords by remember { mutableStateOf(0f) }   //total correct words typed
 
     var totalTime by remember { mutableStateOf(0.1f) }  //total time elapsed in seconds
-    val timeToReset = 5 //the number of seconds before a word is swapped
+    val timeToReset = 5 //the number of seconds before the word list is swapped
     var currentTime by remember { mutableStateOf(0f) } //current time since reset in ms
-    var currentText by remember { mutableStateOf("") }
+    var currentText by remember { mutableStateOf("") }  //current text in textField
 
-//    var wordIndex by remember {
-//        mutableStateOf(getWordIndex(words.size))
-//    }
+    var wordIndices = makeWordList(words.size)  //the initial word list
 
-    var wordIndices = makeWordList(words.size)
-
+    //On launch, start a constant loop that updates the time every .1 seconds.
+    //If the time tracked is at the reset time:
+    // - update overall elapsed time and reset current time counter to 0
+    // - swap out the word list completely
+    // - reset the textfield to be empty
     LaunchedEffect(Unit) {
         while(true){
             delay(100)
@@ -119,6 +125,7 @@ fun MakeScreen(words: Vector<String>) {
                 text = "Speed Typing!",
                 fontSize = 30.sp
             )
+            //calculate and display the words per minute
             val wpm = (totalWords/totalTime)*60
             Text(
                 text = String.format(Locale.ENGLISH,"Words per minute: %.3f", wpm),
@@ -133,6 +140,7 @@ fun MakeScreen(words: Vector<String>) {
 //                text = words[wordIndex],
 //                fontSize = 30.sp
 //            )
+            //Use a lazy column to display the dynamic word list
             LazyColumn(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier
@@ -147,10 +155,17 @@ fun MakeScreen(words: Vector<String>) {
                 }
             }
             Spacer(Modifier.size(20.dp))
+            //user types the words via textfield
             TextField(
                 value = currentText,
                 onValueChange = {
                     currentText = it
+                    //Whenever the user alters the textfield content:
+                    // - if the word in the box matches one on display"
+                    //      - update total time elapsed and reset current time to 0
+                    //      - increment total words typed
+                    //      - swap out just the word that was typed
+                    //      - reset textfield contents to be empty
                     coroutineScope.launch(Dispatchers.Main) {
 //                        if (currentText == words[wordIndex]) {
 //                            totalTime += currentTime / 1000
